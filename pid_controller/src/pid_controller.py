@@ -9,7 +9,7 @@ class PID_CONTROLLER:
         self.ki = i_coef
         self.kd = d_coef
         self._limit_out = limit_out
-        self._previous_error = 0.0
+        self._previous_error = 0
 
     def set_current_error(self, error):
 
