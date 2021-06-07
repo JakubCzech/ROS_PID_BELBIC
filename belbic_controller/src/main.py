@@ -9,14 +9,15 @@ def shutdown_callback():
 
 
 if __name__ == "__main__":
-    rospy.init_node('belbic_pid', anonymous=True, disable_signals=True )
+    rospy.init_node('turtle_bot_pid', anonymous=True, disable_signals=True)
     test = TEST()
+
     lb = [0.001, 0.001, 0.001]
-    ub = [0.1, 0.1, 0.1]
-    xopt, fopt = pso(test.test_trajectory, lb, ub)
+    ub = [1, 1, 1]
+    xopt, fopt = pso(test.test_trajectory, lb, ub, minfunc=0.001, minstep=0.001)
     print("Xopt :", xopt)
     print("Fopt :", fopt)
+
     rospy.on_shutdown(shutdown_callback)
     rospy.signal_shutdown("End")
     rospy.spin()
-# 0.02778856958089164 0.06277435694497437 0.07051942675312053
