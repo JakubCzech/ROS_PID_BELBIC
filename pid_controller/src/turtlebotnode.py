@@ -62,7 +62,7 @@ class TurtleBotNode:
                 self.error_fl = True
                 break
         if(self.error_fl):
-            print("Navigation error")
+            print("Koniec czasu")
             self.action(0, 0)
         self.action(0, 0)
 
