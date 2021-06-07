@@ -1,11 +1,14 @@
-from turtlebotnode import TurtleBotNode
-from points import points_1, points_3
-from time import perf_counter
+import rospy
 import math
+
+from turtlebotnode import TurtleBotNode
+from points import points_3
+
+from time import perf_counter
 from numpy import arange
 from std_srvs.srv import Empty
-import rospy
-from os import system,name
+
+from os import system, name
 
 
 reset_simulation = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
@@ -23,12 +26,12 @@ class TEST:
         reset_simulation()
         system('cls' if name == 'nt' else 'clear')
         self.turtlebot = TurtleBotNode(max_time)
-        self.type = type # yaw or distance
+        self.type = type
         for j in range(50):
-            for i in arange(1.0,11.0,1.0):
-                self.points.append((float(i)/2,i%2))
-            for i in arange(9.0,-1.0,-1.0):
-                self.points.append((float(i)/2,i%2))
+            for i in arange(1.0, 11.0, 1.0):
+                self.points.append((float(i)/2, i % 2))
+            for i in arange(9.0, -1.0, -1.0):
+                self.points.append((float(i)/2, i % 2))
 
     # Inicjalizacja zmiennych dla testu punktów, odczytanie kolejnego punktu w trasie
     def init_test_points(self):
@@ -69,6 +72,9 @@ class TEST:
         self.result = []
         self.error = []
         self.time = 0
+        pid[0] = round(pid[0], 4)
+        pid[1] = round(pid[1], 4)
+        pid[2] = round(pid[2], 4)
         self.result.append(("\nNastawy: ", pid[0], pid[1], pid[2], 0, 0))
         print("Nastawy: ", pid[0], pid[1], pid[2])
 
@@ -86,25 +92,25 @@ class TEST:
                 return 100
             tmp_time = round(t1-t0, 4)
             distance = math.sqrt(math.pow((self.destination[0] - self.turtlebot.pose[0]), 2) + math.pow((self.destination[1] - self.turtlebot.pose[1]), 2))
-            self.error.append(round(distance * tmp_time,4))
+            self.error.append(round(distance * tmp_time, 4))
             print("Pose :", self.turtlebot.pose[0], " , ", self.turtlebot.pose[1], " Time: ", tmp_time, " Error: ", round(self.error[-1], 4))
-            self.result.append((self.destination[0], self.destination[1], self.turtlebot.pose[0], self.turtlebot.pose[1], tmp_time,self.error[-1]))
+            self.result.append((self.destination[0], self.destination[1], self.turtlebot.pose[0], self.turtlebot.pose[1], tmp_time, self.error[-1]))
             self.time += tmp_time
 
         self.save_result()
         self.mean_error = sum(self.error) / len(self.error)
-        self.string_tmp = '\n'+str(round(self.mean_error, 4))+"|"+str(round(self.time,2))+"|"+str(pid[0])+"|"+str(pid[1])+"|"+str(pid[2])
+        self.string_tmp = '\n'+str(round(self.mean_error, 4))+"|"+str(round(self.time, 2))+"|"+str(pid[0])+"|"+str(pid[1])+"|"+str(pid[2])
         self.save_error()
         return self.mean_error
 
     # Zapisanie wyników
     def save_error(self):
-        file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/error_"+self.test_type+"_"+self.type+".txt"
+        file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/pid/error_"+self.test_type+"_"+self.type+".txt"
         with open(file_name, 'a') as fp:
             fp.write(self.string_tmp)
 
     # Zapisanie wyników dla poszczegolnych kroków w teście trajektorii
     def save_result(self):
-        file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/results_"+ self.type + ".txt"
+        file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/pid/results_" + self.type + ".txt"
         with open(file_name, 'a') as fp:
             fp.write('\n'.join('{}|{}|{}|{}|{}|{}'.format(x[0], x[1], x[2], x[3], x[4], x[5]) for x in self.result))

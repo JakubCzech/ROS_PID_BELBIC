@@ -13,8 +13,8 @@ if __name__ == "__main__":
     test = TEST()
 
     lb = [0.001, 0.001, 0.001]
-    ub = [0.9, 0.9, 0.9]
-    xopt, fopt = pso(test.test_points, lb, ub)
+    ub = [1, 1, 1]
+    xopt, fopt = pso(test.test_trajectory, lb, ub, minfunc=0.001, minstep=0.001)
     print("Xopt :", xopt)
     print("Fopt :", fopt)
 
