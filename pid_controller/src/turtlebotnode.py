@@ -7,7 +7,9 @@ from nav_msgs.msg import Odometry
 from pid_controller import PID_CONTROLLER
 from geometry_msgs.msg import Twist
 from time import perf_counter,sleep
+from std_srvs.srv import Empty
 
+reset_simulation = rospy.ServiceProxy('/gazebo/reset_simulation', Empty)
 
 class TurtleBotNode:
 
@@ -19,8 +21,7 @@ class TurtleBotNode:
         self.error_fl = 0
         self.max_time=max_time
         self.rate = rospy.Rate(10)
-        self.action(0, 0)
-        self.go_home_pos()
+
 
     def callback_update_position(self, data):
         self.pose[0]= round(data.pose.pose.position.x, 4)
@@ -36,11 +37,13 @@ class TurtleBotNode:
         accuracy = 0.1
 
         if(type=="yaw"):
-            PID_Yaw = PID_CONTROLLER(pid[0], pid[1], pid[2], 1)
-            PID_Distance = PID_CONTROLLER(0.0655145404317901, 0.09993384022612885, 0.028555576446369184, 1)
+            PID_Yaw = PID_CONTROLLER(pid[0], pid[1], pid[2], 0.3)
+            PID_Distance = PID_CONTROLLER(0.55196151965454, 0.7938246693288955, 0.425987626682297, 0.5)
+            # 70.|1.0764|11.39|0.55196151965454|0.7938246693288955|0.425987626682297
+
         elif(type=="distance"):
-            PID_Distance= PID_CONTROLLER(pid[0], pid[1], pid[2], 1)
-            PID_Yaw = PID_CONTROLLER(0.05550086361364029, 0.04983812908133718, 0.04405278167220987, 1)
+            PID_Distance= PID_CONTROLLER(pid[0], pid[1], pid[2], 0.5)
+            PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.5)
 
         distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
         t0 = perf_counter()
@@ -65,29 +68,13 @@ class TurtleBotNode:
         self.action(0, 0)
 
 
-    def go_home_pos(self):
-        self.action(0, 0)
-        goal_pose = (0.0,0.0)
-        accuracy = 0.001
-        distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
-        PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.3)
-        PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.5)
-        while distance > accuracy:
-            psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
-            ang = math.degrees(psi)
-            distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
-            error_yaw = ang - self.yaw_deg
-            out_yaw = PID_Yaw.set_current_error(error_yaw)
-            out_distance = PID_Distance.set_current_error(distance)
-            self.action(out_distance, out_yaw)
-        self.action(0, 0)
-        return True
-
     def go_point_pos(self, goal_pose):
         accuracy = 0.001
         distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
         PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.3)
         PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.5)
+        if distance>6.0:
+            reset_simulation()
         while distance > accuracy:
             psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
             ang = math.degrees(psi)

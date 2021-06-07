@@ -13,8 +13,7 @@ if __name__ == "__main__":
     test = TEST()
 
     lb = [0.001, 0.001, 0.001]
-    ub = [0.1, 0.1, 0.1]
-    test.turtlebot.go_home_pos()
+    ub = [0.9, 0.9, 0.9]
     xopt, fopt = pso(test.test_points, lb, ub)
     print("Xopt :", xopt)
     print("Fopt :", fopt)
