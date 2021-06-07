@@ -1,0 +1,3 @@
+<launch>
+  <node name="belbic_controller" pkg="belbic_controller" type="main.py" output="screen"/>
+</launch>
