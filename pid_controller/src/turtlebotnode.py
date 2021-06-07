@@ -73,9 +73,10 @@ class TurtleBotNode:
         distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
         PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.3)
         PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.5)
-        if distance>6.0:
-            reset_simulation()
+       
         while distance > accuracy:
+            if distance>6.0:
+                reset_simulation()
             psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
             ang = math.degrees(psi)
             distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
