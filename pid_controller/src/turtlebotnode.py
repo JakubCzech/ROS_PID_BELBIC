@@ -45,8 +45,10 @@ class TurtleBotNode:
             PID_Yaw = PID_CONTROLLER(pid[0], pid[1], pid[2], 0.3)
             PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.5)
         elif(type == "distance"):
-            PID_Distance = PID_CONTROLLER(pid[0], pid[1], pid[2], 0.5)
-            PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.5)
+            PID_Distance = PID_CONTROLLER(pid[0], pid[1], pid[2], 0.2)
+            PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.3)
+        # PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.5)
+        # PID_Yaw = PID_CONTROLLER(0.05, 0.00, 0.01, 0.3)
 
         distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
         t0 = perf_counter()
@@ -65,9 +67,6 @@ class TurtleBotNode:
                 self.action(0, 0)
                 self.error_fl = True
                 break
-        if(self.error_fl):
-            print("Koniec czasu, dystans:", distance)
-            self.action(0, 0)
         self.action(0, 0)
 
     def go_point_pos(self, goal_pose):
@@ -76,7 +75,7 @@ class TurtleBotNode:
         PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.5)
 
         while distance > self.accuracy:
-            if distance > 10.0:
+            if distance > 100.0:
                 reset_simulation()
             psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
             ang = math.degrees(psi)
@@ -119,7 +118,8 @@ class TurtleBotNode:
             U = -_limit_out
         return U
 
-    def calculations_belbic(self, destination, pid, type): #destination(x,y),pid(p,i,d),test_type(yaw or distance)
+    def calculations_belbic(self, destination, pid, type):  # destination(x,y),pid(p,i,d),test_type(yaw or distance)
+
         goal_pose = destination
         self.accuracy = 0.5
         if(type == "yaw"):
@@ -129,10 +129,10 @@ class TurtleBotNode:
             Cnt_D_SI = PID_CONTROLLER_BELBIC(pid[0], pid[1], pid[2])
             Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(0.02, 0.00, 0.00)
 
-        # Cnt_D_SI = PID_CONTROLLER_BELBIC(1.3, 1.8, 0.0001)
+        Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(0.02, 0.00, 0.00)
+        Cnt_D_SI = PID_CONTROLLER_BELBIC(1.3, 1.8, 0.0001)
 
-
-        Cnt_D_REW = PD_CONTROLLER(5.4, 0.5)
+        Cnt_D_REW = PD_CONTROLLER(4.0, 7.5)
         Cnt_Yaw_REW = PD_CONTROLLER(0.02, 0.00)
         distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
         t0 = perf_counter()
@@ -149,7 +149,7 @@ class TurtleBotNode:
 
             SI_D = Cnt_D_SI.set_SI(distance)
             SI_YAW = Cnt_Yaw_SI.set_SI(error_yaw)
-            out_distance = self.Belbic(SI_D,   REW_D,    0.5)
+            out_distance = self.Belbic(SI_D,   REW_D,    0.2)
             out_yaw = self.Belbic(SI_YAW, REW_YAW,  0.3)
             self.action(out_distance, out_yaw)
             t1 = perf_counter()
