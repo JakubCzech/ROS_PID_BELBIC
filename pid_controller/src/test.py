@@ -23,23 +23,22 @@ class TEST:
     not_ok = 0
     best_time = 3600
     belbic = 0
-    test_type = ""
     test_main_type = ""
 
     def __init__(self, type_main="trajectory", type="distance", max_time=20, belbic=0, distance=0.01):
         reset_simulation()
-        self.make_points()
-
+# self.init_save()
         system('cls' if name == 'nt' else 'clear')
         self.test_main_type = type_main
         self.turtlebot = TurtleBotNode(max_time)
         self.type = type
         self.belbic = belbic
         self.turtlebot.accuracy = distance
+        self.make_points()
+
 
     # Inicjalizacja zmiennych dla testu punktów, odczytanie kolejnego punktu w trasie
     def init_test_points(self):
-        self.test_type = "points"
         self.destination[0] = self.points[self.iterator][0]
         self.destination[1] = self.points[self.iterator][1]
         self.iterator += 1
@@ -89,7 +88,6 @@ class TEST:
     # Inicjalizacja zmiennych dla testu trajektorii
     def init_test_trajectory(self, pid):
         system('cls' if name == 'nt' else 'clear')
-        self.test_type = "trajectory"
         reset_simulation()
         self.error = []
         self.time = 0
@@ -143,9 +141,9 @@ class TEST:
     # Zapisanie wyników
     def save_error(self):
         if(self.belbic):
-            file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/belbic/error_"+self.test_type+"_"+self.type+"_"+str(self.turtlebot.accuracy)+"_"+str(self.turtlebot.max_time)+".txt"
+            file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/belbic/error_"+self.test_main_type+"_"+self.type+"_"+str(self.turtlebot.accuracy)+"_"+str(self.turtlebot.max_time)+".txt"
         else:
-            file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/pid/error_"+self.test_type+"_"+self.type+"_"+str(self.turtlebot.accuracy)+"_"+str(self.turtlebot.max_time)+".txt"
+            file_name = "/home/jakub/ROS_Projects/Turtle_bot_pid/output/pid/error_"+self.test_main_type+"_"+self.type+"_"+str(self.turtlebot.accuracy)+"_"+str(self.turtlebot.max_time)+".txt"
         with open(file_name, 'a') as fp:
             fp.write(self.string_tmp)
 
@@ -159,15 +157,16 @@ class TEST:
                 self.points.append(((float(i)/2)*2, -2))
             else:
                 self.points.append(((float(i)/2)*2, 0))
-        for i in arange(9.0, -1.0, -1.0):
-            if(i % 4 == 1):
-                self.points.append(((float(i)/2)*2, -2))
-            elif(i % 4 == 2):
-                self.points.append(((float(i)/2)*2, 0))
-            elif(i % 4 == 3):
-                self.points.append(((float(i)/2)*2, 2))
-            else:
-                self.points.append(((float(i)/2)*2, 0))
+        if(self.test_main_type == "points"):
+            for i in arange(9.0, -1.0, -1.0):
+                if(i % 4 == 1):
+                    self.points.append(((float(i)/2)*2, -2))
+                elif(i % 4 == 2):
+                    self.points.append(((float(i)/2)*2, 0))
+                elif(i % 4 == 3):
+                    self.points.append(((float(i)/2)*2, 2))
+                else:
+                    self.points.append(((float(i)/2)*2, 0))
 
     def print_header_points(self, pid):
         if self.ok+self.not_ok > 0:

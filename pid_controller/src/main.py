@@ -11,7 +11,7 @@ def shutdown_callback():
 if __name__ == "__main__":
     rospy.init_node('turtle_bot_pid', anonymous=True, disable_signals=True)
 
-    test = TEST("points", "yaw", 45, 0, 0.05)
+    test = TEST("trajectory", "yaw", 45, 0, 0.05)
     # type="points" or "trajectory",type="distance" or "yaw", max_time, belbic= 0 or 1 (on off), distance):
     #
     lb = [0, 0, 0]
