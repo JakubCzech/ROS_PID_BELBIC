@@ -1,5 +1,5 @@
 import rospy
-import math
+from math import pow, sqrt
 from turtlebotnode import TurtleBotNode
 from time import perf_counter
 from numpy import arange
@@ -15,10 +15,10 @@ class TEST:
     pid = [0, 0, 0]
     points = []
     best_error = 100.0
+    best_time = 3600
     iterator = 0
     ok = 0
     not_ok = 0
-    best_time = 3600
     belbic = 0
     test_main_type = ""
 
@@ -44,7 +44,6 @@ class TEST:
             # Sprawdzenie i obsługa niepowodzenia
             if self.turtlebot.error_fl:
                 print("Niepowodzenie, pozycja :", self.turtlebot.pose[0], " , ", self.turtlebot.pose[1], " Dystans do celu:", distance)
-                reset_simulation()
                 self.turtlebot.go_point_pos(self.destination)
                 self.not_ok += 1
                 return 100+distance*10
@@ -55,6 +54,7 @@ class TEST:
             print("Pozycja :", self.turtlebot.pose[0], " , ", self.turtlebot.pose[1], " Czas: ", tmp_time, " Błąd: ", tmp_error, " Dystans do celu:", distance)
             # Sprawdzenie czy wynik jest lepszy od dotychczasowego najlepszego
             if tmp_error < self.best_error:
+                self.best_time = tmp_time
                 self.best_error = tmp_error
                 print("Nowy najlepszy wynik: ", pid[0], pid[1], pid[2], " Error :", tmp_error)
                 self.string_tmp = '\n'+str(tmp_error)+"|"+str(tmp_time)+"|"+str(distance)+"|"+str(pid[0])+"|"+str(pid[1])+"|"+str(pid[2])
@@ -93,11 +93,12 @@ class TEST:
                 # Wypisanie informacji
                 print("Pozycja :", self.turtlebot.pose[0], " , ", self.turtlebot.pose[1], " Czas: ", tmp_time, " Błąd: ", round(error[-1], 4), " Dystans do celu:", tmp_distance)
             # Dotarto do celu z nowym najlepszym czasem
+            mean_error = round(sum(error) / len(error), 4)
+            mean_distance = round(sum(distance) / len(distance), 4)
             self.best_time = time
-            self.mean_error = round(sum(error) / len(error), 4)
-            distance = round(sum(tmp_distance) / len(tmp_distance), 4)
+            self.best_error = mean_error
             # Wygenerowanie lini do pliku i zapisanie
-            self.string_tmp = '\n'+str(self.mean_error)+"|"+str(self.best_time)+"|"+str(distance)+"|"+str(pid[0])+"|"+str(pid[1])+"|"+str(pid[2])
+            self.string_tmp = '\n'+str(mean_error)+"|"+str(time)+"|"+str(mean_distance)+"|"+str(pid[0])+"|"+str(pid[1])+"|"+str(pid[2])
             self.save()
             # Aktualizacja licznik udanych trajektorii
             self.ok += 1
@@ -105,7 +106,7 @@ class TEST:
             return self.mean_error
 
         elif(self.test_main_type == "trajectory" and self.belbic == 1):
-            # self.init_test_trajectory(pid)
+            self.print_header_belbic()
             it = 0
             distance = []
             error = []
@@ -131,18 +132,19 @@ class TEST:
                 print("Pozycja :", self.turtlebot.pose[0], " , ", self.turtlebot.pose[1], " Czas: ", tmp_time, " Błąd: ", round(error[-1], 4), " Dystans do celu:", tmp_distance)
                 # Dodanie wartości tymczasowych
                 distance.append(tmp_distance)
+            # Policzenie średniego dystansu i błędu
+            mean_distance = round(sum(distance) / len(distance), 4)
+            mean_error = round(sum(error) / len(error), 4)
             # Przypisanie nowego najlepszego czasu
             self.best_time = time
-            # Policzenie średniego dystansu i błędu
-            distance_mean = round(sum(distance) / len(distance), 4)
-            error_mean = round(sum(error) / len(error), 4)
+            self.best_error = mean_error
             # Zapisanie danych do pliku
-            self.string_tmp = '\n'+str(error_mean)+"|"+str(time)+"|"+str(distance_mean)
+            self.string_tmp = '\n'+str(mean_error)+"|"+str(time)+"|"+str(mean_distance)
             self.save()
             # Aktualizacja licznik udanych trajektorii
             self.ok += 1
             # Zwrócenie błędu
-            return self.mean_error
+            return mean_error
 
         elif(self.test_main_type == "points" and self.belbic == 1):
             self.init_test_points(pid)
@@ -167,6 +169,7 @@ class TEST:
             # Sprawdzenie czy wynik jest lepszy od dotychczasowego najlepszego
             if tmp_error < self.best_error:
                 self.best_error = tmp_error
+                self.best_time = tmp_time
                 print("Nowy najlepszy wynik: ", pid[0], pid[1], pid[2], " Error :", tmp_error)
                 self.string_tmp = '\n'+str(tmp_error)+"|"+str(tmp_time)+"|"+str(distance)
                 self.save()
@@ -229,13 +232,13 @@ class TEST:
                     self.points.append(((float(i)/2)*2, 0))
 
     def distance(self):
-        return round(math.sqrt(math.pow((self.destination[0] - self.turtlebot.pose[0]), 2) + math.pow((self.destination[1] - self.turtlebot.pose[1]), 2)), 4)
+        return round(sqrt(pow((self.destination[0] - self.turtlebot.pose[0]), 2) + pow((self.destination[1] - self.turtlebot.pose[1]), 2)), 4)
 
     def print_header_points(self):
         if self.ok+self.not_ok > 0:
             print("")
-            print("Prób udanych:", self.ok, "Prób nieudanych:", self.not_ok, "Procent poprawnych:", round(100*(self.ok/(self.ok+self.not_ok)), 2), "% Najlepszy wynik:", self.best_error)
-        print(self.iterator, "Nastawy: ", self.pid[0], self.pid[1], self.pid[2], " Cel :", self.destination[0], " , ", self.destination[1])
+            print("Prób udanych:", self.ok, "Prób nieudanych:", self.not_ok, "Procent poprawnych:", round(100*(self.ok/(self.ok+self.not_ok)), 2), "% Najlepszy czas:", self.best_time)
+        print(self.ok+self.not_ok+1, "Nastawy: ", self.pid[0], self.pid[1], self.pid[2], " Cel :", self.destination[0], " , ", self.destination[1])
 
     def print_header_trajectory(self):
         if self.ok+self.not_ok > 0:
@@ -244,7 +247,9 @@ class TEST:
             print("")
 
     def print_header_belbic(self):
+        if(self.test_main_type == "trajectory"):
+            system('cls' if name == 'nt' else 'clear')
         if self.ok+self.not_ok > 0:
             print("")
-            print("Prób udanych:", self.ok, "Prób nieudanych:", self.not_ok, "Procent poprawnych:", round(100*(self.ok/(self.ok+self.not_ok)), 2), "% Najlepszy wynik:", self.best_error)
-        print(self.iterator, " Cel :", self.destination[0], " , ", self.destination[1])
+            print("Prób udanych:", self.ok, "Prób nieudanych:", self.not_ok, "Procent poprawnych:", round(100*(self.ok/(self.ok+self.not_ok)), 2), "% Najlepszy czas:", self.best_time)
+        print(self.ok+self.not_ok+1, " Cel :", self.destination[0], " , ", self.destination[1])

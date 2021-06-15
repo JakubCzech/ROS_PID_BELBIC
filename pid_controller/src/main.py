@@ -14,7 +14,7 @@ if __name__ == "__main__":
     lb = [0, 0, 0]
     ub = [2, 2, 2]
 
-    test = TEST("points", "distance", 25, 0, 0.05)
+    test = TEST("points", "distance", 50, 1, 0.05)
     # type="points" or "trajectory",type="distance" or "yaw", max_time, belbic= 0 or 1 (on off), distance):
 
     xopt, fopt = pso(test.test, lb, ub, minfunc=0.1, minstep=0.1)

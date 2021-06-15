@@ -23,7 +23,6 @@ class TurtleBotNode:
         self.error_fl = 0
         self.accuracy = acc
         self.max_time = max_time
-        # self.rate = rospy.Rate(100)
         self.w = 0.0
         self.v = 0.0
         self.alfa = 0.00002
@@ -39,8 +38,6 @@ class TurtleBotNode:
 
     def calculations(self, destination, pid, type):
         goal_pose = destination
-        # PID_Yaw = PID_CONTROLLER(pid[0], pid[1], pid[2], 0.3)
-        # PID_Distance= PID_CONTROLLER(pid[0], pid[1], pid[2], 0.5)
         if(type == "yaw"):
             PID_Yaw = PID_CONTROLLER(pid[0], pid[1], pid[2], 0.3)
             PID_Distance = PID_CONTROLLER(0.001, 0.1, 1.6, 0.2)
@@ -98,19 +95,13 @@ class TurtleBotNode:
         A = (self.v * SI)
         O = (self.w * SI)
         MO = (A - O)
-        # Ath = (self.Vth * SI)
-        # MO  = ((Ath + A) - O)
         rest = REW - A
-
         if rest < 0:
             rest = 0
-
         dv = self.alfa * (rest) * SI
         dw = self.beta * (MO - REW) * SI
-        # dvth = self.alfa * (rest)     * SI
         self.v = self.v + dv
         self.w = self.w + dw
-        # self.Vth = self.Vth + dvth
         U = MO
         if U > _limit_out:
             U = _limit_out
@@ -119,7 +110,6 @@ class TurtleBotNode:
         return U
 
     def calculations_belbic(self, destination, pid, type):  # destination(x,y),pid(p,i,d),test_type(yaw or distance)
-
         goal_pose = destination
         if(type == "yaw"):
             Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(pid[0], pid[1], pid[2])
@@ -127,7 +117,7 @@ class TurtleBotNode:
         elif(type == "distance"):
             Cnt_D_SI = PID_CONTROLLER_BELBIC(pid[0], pid[1], pid[2])
             Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(0.02, 0.00, 0.00)
-
+        # Aby testować nastway zakomentuj poniższe linie
         Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(0.02, 0.00, 0.00)
         Cnt_D_SI = PID_CONTROLLER_BELBIC(1.3, 1.8, 0.0001)
 
@@ -137,15 +127,12 @@ class TurtleBotNode:
         t0 = perf_counter()
         self.error_fl = False
         while distance >= self.accuracy:
-
             psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
             ang = math.degrees(psi)
             distance = math.sqrt(math.pow((goal_pose[0] - self.pose[0]), 2) + math.pow((goal_pose[1] - self.pose[1]), 2))
             error_yaw = ang - self.yaw_deg
-
             REW_D = Cnt_D_REW.set_REW(distance)
             REW_YAW = Cnt_Yaw_REW.set_REW(error_yaw)
-
             SI_D = Cnt_D_SI.set_SI(distance)
             SI_YAW = Cnt_Yaw_SI.set_SI(error_yaw)
             out_distance = self.Belbic(SI_D,   REW_D,    0.2)
