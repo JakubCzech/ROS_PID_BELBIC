@@ -27,3 +27,18 @@ ENTRYPOINT ["/ros_entrypoint.sh"]
 
 CMD ["terminator"]
 ```
+
+```
+xhost +local:root
+docker run -it  \
+	--name=main_container \
+	--shm-size=1g \
+	--ulimit memlock=-1 \
+	--volume="/home/$SUDO_USER/Shared:/root/Shared:rw" \
+	--device=/dev/dri:/dev/dri \
+	--device=/dev/video0 \
+	--env="DISPLAY=$DISPLAY" \
+	--network=host \
+	miapr:main \
+	bash
+```
