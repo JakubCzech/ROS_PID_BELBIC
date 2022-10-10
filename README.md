@@ -1,44 +1,22 @@
-# ROS_PID_BELBIC
-Węzeł ROS napisany w python służący do testowania algorytmów dobierającyh nastawy PID w celu poruszania TurtleBotem
-```
-FROM osrf/ros:noetic-desktop-full
-ENV DEBIAN_FRONTEND noninteractive 
 
-RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc
-RUN apt-get update && apt-get install -y terminator git python3-pip \
-ros-noetic-dynamixel-sdk ros-noetic-turtlebot3-msgs ros-noetic-turtlebot3 \
-ros-noetic-joy ros-noetic-teleop-twist-joy ros-noetic-teleop-twist-keyboard \
-ros-noetic-laser-proc ros-noetic-rgbd-launch ros-noetic-rosserial-arduino \
-ros-noetic-rosserial-python ros-noetic-rosserial-client ros-noetic-rosserial-msgs \
-ros-noetic-amcl ros-noetic-map-server ros-noetic-move-base ros-noetic-urdf \ 
-ros-noetic-xacro ros-noetic-compressed-image-transport ros-noetic-rqt* ros-noetic-rviz \
-ros-noetic-gmapping ros-noetic-navigation ros-noetic-interactive-markers black \
-&& apt-get clean -y && rm -rf /var/lib/apt/lists/*
+## General info
+This project can show you how Particle swarm optimization works with simulated turtlebot 3. In addition to the classic PID controller, a modified controller is available with the addition of a Belbic biologically-inspired driver.
+	
+## Technologies
+Project is created with:
+* Python3
+* Ros Noetic
+* pyswarm
+	
+## Setup
 
-RUN mkdir -p /root/miapr/src
-RUN cd /root/miapr/src && git clone https://github.com/JakubCzech/ROS_PID_BELBIC.git && git clone -b noetic-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git
-RUN cp -r /root/miapr/src/ROS_PID_BELBIC/pid_controller /root/miapr/src/
-RUN rm -rf /root/miapr/src/ROS_PID_BELBIC
-RUN chmod +x /root/miapr/src/pid_controller/src/*
-RUN /bin/bash -c '. /opt/ros/noetic/setup.bash; cd /root/miapr ; catkin_make ; source devel/setup.bash'
-RUN pip install pyswarm
-RUN echo "export TURTLEBOT3_MODEL=burger" >> /root/.bashrc
-ENTRYPOINT ["/ros_entrypoint.sh"]
+### Without Docker
 
-CMD ["terminator"]
-```
+Clone this repository to your src dir and build it (catkin_make or catkin build)
 
-```
-xhost +local:root
-docker run -it  \
-	--name=main_container \
-	--shm-size=1g \
-	--ulimit memlock=-1 \
-	--volume="/home/$SUDO_USER/Shared:/root/Shared:rw" \
-	--device=/dev/dri:/dev/dri \
-	--device=/dev/video0 \
-	--env="DISPLAY=$DISPLAY" \
-	--network=host \
-	miapr:main \
-	bash
-```
+### With Docker
+
+Clone this repository (or download files: setup.bash and Dockerfile to one directory) and install it by executing setup.bash, this file has create new Docker Image with builded pid_controller package and start new terminal in ros workspace. You can start testing by typing roslaunch pid_controller pid_controller.launch. You can modify tuning params by changing main.py and controller.py files.
+
+
+
