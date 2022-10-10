@@ -11,10 +11,11 @@ from simple_pid import PID
 from std_srvs.srv import Empty
 from tf.transformations import euler_from_quaternion
 
+from controllers import PD_Controller, PID_Belbic
 from errors import NavigationMaxTimeError
 
 reset_simulation = rospy.ServiceProxy("/gazebo/reset_simulation", Empty)
-SPEED_LIMIT = 0.1
+SPEED_LIMIT = 0.25
 
 
 def log_info(func):
@@ -38,18 +39,18 @@ def calc_distance(
 
 
 class TurtleBotNode:
-    def __init__(self, max_time: int = 20, acc: int = 0.01):
+    def __init__(self, max_time: int = 20, acc: float = 0.01):
         self.velocity_publisher = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         rospy.Subscriber("odom", Odometry, self.callback_update_position)
 
-        self.pose = [0, 0]
-        self.yaw_deg = 0
-        self.accuracy = acc
-        self.max_time = max_time
-        self.w = 0.0
-        self.v = 0.0
-        self.alfa = 0.00002
-        self.beta = 0.00009
+        self.pose: list[float, float] = [0, 0]
+        self.yaw_deg: float = 0
+        self.accuracy: float = acc
+        self.max_time: int = max_time
+        self.w: float = 0.0
+        self.v: float = 0.0
+        self.alfa: float = 0.00002
+        self.beta: float = 0.00009
 
     def callback_update_position(self, data):
         self.pose[0] = round(data.pose.pose.position.x, 4)
@@ -95,18 +96,18 @@ class TurtleBotNode:
 
     def go_point_pos(self, goal_pose):
         distance = calc_distance(self.pose, goal_pose)
-        PID_Yaw = PID(0.05, 0.00, 0.01, setpoint=1)
-        PID_Distance = PID(0.001, 0.1, 1.6, setpoint=1)
+        pid_yaw = PID(0.05, 0.00, 0.01, setpoint=1)
+        pid_distance = PID(0.001, 0.1, 1.6, setpoint=1)
 
-        while distance > self.accuracy:
+        while distance > self.accuracy and not rospy.is_shutdown():
             if distance > 100.0:
                 reset_simulation()
             psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
             ang = math.degrees(psi)
             distance = calc_distance(self.pose, goal_pose)
             error_yaw = ang - self.yaw_deg
-            out_yaw = PID_Yaw(error_yaw)
-            out_distance = PID_Distance(distance)
+            out_yaw = pid_yaw(error_yaw)
+            out_distance = pid_distance(distance)
             self.action(out_distance, out_yaw)
         self.action(0, 0)
         return True
@@ -137,44 +138,38 @@ class TurtleBotNode:
         return U
 
     def calculations_belbic(
-        self, destination, pid, type
-    ):  # destination(x,y),pid(p,i,d),test_type(yaw or distance)
-        goal_pose = destination
-        if type == "yaw":
-            Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(pid[0], pid[1], pid[2])
-            Cnt_D_SI = PID_CONTROLLER_BELBIC(1.3, 1.8, 0.0001)
-        elif type == "distance":
-            Cnt_D_SI = PID_CONTROLLER_BELBIC(pid[0], pid[1], pid[2])
-            Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(0.02, 0.00, 0.00)
-        # Aby testować nastway zakomentuj poniższe linie
-        Cnt_Yaw_SI = PID_CONTROLLER_BELBIC(0.02, 0.00, 0.00)
-        Cnt_D_SI = PID_CONTROLLER_BELBIC(1.3, 1.8, 0.0001)
+        self, destination: Tuple[float, float], pid: Tuple[float, float, float]
+    ) -> Tuple[float, float]:
 
-        Cnt_D_REW = PD_CONTROLLER(4.0, 7.5)
-        Cnt_Yaw_REW = PD_CONTROLLER(0.02, 0.00)
-        distance = math.sqrt(
-            math.pow((goal_pose[0] - self.pose[0]), 2)
-            + math.pow((goal_pose[1] - self.pose[1]), 2)
-        )
+        Cnt_D_SI = PID_Belbic(pid[0], pid[1], pid[2])
+        Cnt_Yaw_SI = PID_Belbic(0.02, 0.00, 0.00)
+
+        # Cnt_Yaw_SI = PID_Belbic(0.02, 0.00, 0.00)
+        # Cnt_D_SI = PID_Belbic(1.3, 1.8, 0.0001)
+
+        Cnt_D_REW = PD_Controller(4.0, 7.5)
+        Cnt_Yaw_REW = PD_Controller(0.02, 0.00)
+        distance = calc_distance(self.pose, destination)
         t0 = perf_counter()
-        self.error_fl = False
-        while distance >= self.accuracy:
-            psi = math.atan2(goal_pose[1] - self.pose[1], goal_pose[0] - self.pose[0])
-            ang = math.degrees(psi)
-            distance = math.sqrt(
-                math.pow((goal_pose[0] - self.pose[0]), 2)
-                + math.pow((goal_pose[1] - self.pose[1]), 2)
+        tmp_distance = distance
+        while tmp_distance >= self.accuracy and not rospy.is_shutdown():
+            psi = math.atan2(
+                destination[1] - self.pose[1], destination[0] - self.pose[0]
             )
+            ang = math.degrees(psi)
+            distance = calc_distance(self.pose, destination)
             error_yaw = ang - self.yaw_deg
+
             REW_D = Cnt_D_REW.set_REW(distance)
             REW_YAW = Cnt_Yaw_REW.set_REW(error_yaw)
             SI_D = Cnt_D_SI.set_SI(distance)
             SI_YAW = Cnt_Yaw_SI.set_SI(error_yaw)
+
             out_distance = self.Belbic(SI_D, REW_D, 0.2)
             out_yaw = self.Belbic(SI_YAW, REW_YAW, 0.3)
             self.action(out_distance, out_yaw)
-            t1 = perf_counter()
-            if (t1 - t0) > self.max_time or distance > 100.0:
-                self.error_fl = True
-                break
-        self.action(0, 0)
+
+            if (perf_counter() - t0) > self.max_time or distance > 100.0:
+                self.action(0, 0)
+                raise NavigationMaxTimeError("Time limit exceeded")
+        return distance, perf_counter() - t0

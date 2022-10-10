@@ -1,8 +1,8 @@
-import logging
+import rospy
 
 
 class NavigationMaxTimeError(Exception):
     time: int = 100
 
-    def __init__(self, logger: logging.Logger, message: str):
-        logger.error(message)
+    def __init__(self, message: str):
+        rospy.logerr(message)

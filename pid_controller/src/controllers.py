@@ -3,7 +3,7 @@
 import time
 
 
-class PD_controller:
+class PD_Controller:
     def __init__(self, p_coef: float, d_coef: float) -> None:
         self.kp = p_coef
         self.kd = d_coef
@@ -28,39 +28,11 @@ class PD_controller:
         return output
 
 
-class PID_controller(PD_controller):
-    def __init__(self, p_coef: float, i_coef: float, d_coef: float, limit_out: float):
+class PID_Belbic(PD_Controller):
+    def __init__(self, p_coef, d_coef, i_coef, limit_out):
         super().__init__(p_coef, d_coef)
-
         self.ki = i_coef
         self._limit_out = limit_out
-
-    def set_current_error(self, error: float):
-
-        output0 = error * self.kp
-
-        error_diff = error - self._previous_error
-        outpu1 = self.kd * error_diff
-
-        error_intr = error + self._previous_error
-        outpu2 = self.ki * error_intr
-
-        self._previous_error = error
-
-        output = output0 + outpu1 + outpu2
-
-        if output > self._limit_out:
-            output = self._limit_out
-        elif output < (-self._limit_out):
-            output = -self._limit_out
-
-        return output
-
-
-class PID_Belbic(PID_controller):
-    def __init__(self, p_coef, d_coef, i_coef):
-        super().__init__(p_coef, d_coef, i_coef)
-
         self._last_time = 0.0
         self.error_integ = 0.0
         self._is_error_initialized_PID = False
