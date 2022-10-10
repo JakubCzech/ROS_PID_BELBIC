@@ -1,25 +1,16 @@
 # import json
-import logging
 from datetime import datetime
-from math import pow, sqrt
 from os import name, system
 from time import perf_counter
+from typing import Tuple, Union
 
 import rospy
 from std_srvs.srv import Empty
 
 from errors import NavigationMaxTimeError
-from turtlebotnode import TurtleBotNode
+from turtlebotnode import TurtleBotNode, calc_distance
 
 reset_simulation = rospy.ServiceProxy("/gazebo/reset_simulation", Empty)
-
-
-def calc_distance(
-    p_start: tuple[float, float], p_end: tuple[float, float], acc: int = 4
-) -> float:
-    return round(
-        sqrt(pow((p_start[0] - p_end[0]), 2) + pow((p_start[1] - p_end[1]), 2)), acc
-    )
 
 
 def calc_error(distance: float, time_of_moving: float, acc: int = 4) -> float:
@@ -44,51 +35,60 @@ class Controller:
     def __init__(
         self, *, max_time: int = 20, dist_acc: float = 0.01, belbic: bool = False
     ):
-        self.logger = logging.getLogger("Controller")
+
         self.turtlebot = TurtleBotNode(max_time)
         self.turtlebot.accuracy = dist_acc
         self.belbic = belbic
         self.tests_results: dict = {"positive": 0, "negative": 0}
         self.best_results: dict = {"error": 100.0, "time": 3600, "pid": [0, 0, 0]}
 
-        self.points: list[float, float] = None
+        self.points: Union[float, float] = None
         self.file_name: str = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        reset_simulation()
-        system("cls" if name == "nt" else "clear")
+        try:
+            reset_simulation()
+        except rospy.ServiceException as e:
+            rospy.logerr(e)
+        # system("cls" if name == "nt" else "clear")
 
-    def tuning_unity(self, pid: list[float, float, float]):
+    def tuning_unity(self, pid: Union[float, float, float]):
         """
         One point test without belblic controller
 
         Args:
-            pid (list[float, float, float]): [description]
+            pid (Union[float, float, float]): [description]
 
         Returns:
             float: [description]
         """
         pid = [round(i, 4) for i in pid]
 
-        destination = None  # Cel pobierany z generatora który odczytuje dane z pliku
-        distance = calc_distance(destination, self.turtlebot.pose)
+        destination = (
+            1.5,
+            1.5,
+        )  # Cel pobierany z generatora który odczytuje dane z pliku
+
+        try:
+            reset_simulation()
+        except rospy.ServiceException as e:
+            rospy.logerr(e)
 
         # Start of robot navigation to the point
-        start_time = perf_counter()
         try:
             if self.belbic:
-                self.turtlebot.calculations_belbic(destination, pid, "points")
+                distance, time_of_moving = self.turtlebot.calculations_belbic(
+                    destination, pid
+                )
             else:
-                self.turtlebot.calculations(destination, pid, "points")
+                distance, time_of_moving = self.turtlebot.calculations(destination, pid)
         except NavigationMaxTimeError:
             self.tests_results["negative"] += 1
-            return NavigationMaxTimeError.time + distance * 10
-        end_time = perf_counter()
+            return NavigationMaxTimeError.time
 
         # Calculating error
-        time_of_moving = round(end_time - start_time, 4)
         error_of_moving = calc_error(distance, time_of_moving)
 
         # Logging information
-        self.logger.info(
+        rospy.logerr(
             f"Pozycja : {self.turtlebot.pose}"
             f"Czas: {time_of_moving} Błąd: {error_of_moving} "
             f"Dystans do celu: {distance} "
@@ -99,7 +99,7 @@ class Controller:
             self.best_results["time"] = time_of_moving
             self.best_results["error"] = error_of_moving
 
-            self.logger.info(f"Nowy najlepszy wynik: {pid} Error : {error_of_moving}")
+            rospy.logerr(f"Nowy najlepszy wynik: {pid} Error : {error_of_moving}")
             with open(self.file_name, "a") as fp:
                 fp.write(
                     f"\n{error_of_moving}|{time_of_moving}"
@@ -108,18 +108,18 @@ class Controller:
         self.tests_results["positive"] += 1
         return error_of_moving
 
-    def tuning_complex(self, pid: list[float, float, float]):
+    def tuning_complex(self, pid: Union[float, float, float]):
 
         pid = [round(i, 4) for i in pid]
 
-        total_distance: list = None
-        error: list = None
+        total_distance = None
+        error = None
         total_time: int = 0
 
         for num, destination in enumerate(self.points()):  # self.points or points_3
 
             distance = calc_distance(destination, self.turtlebot.pose)
-            self.logger.debug(f"{num} Dest: {destination} dist: {distance}")
+            rospy.logdebug(f"{num} Dest: {destination} dist: {distance}")
 
             # Start of robot navigation to the point
             start_time = perf_counter()
@@ -141,7 +141,7 @@ class Controller:
             total_distance.append(distance)
 
             # Logging information
-            self.logger.info(
+            rospy.loginfo(
                 f"Pozycja : {self.turtlebot.pose}"
                 f"Czas: {time_of_moving} Błąd: {error_of_moving} "
                 f"Dystans do celu: {distance} "

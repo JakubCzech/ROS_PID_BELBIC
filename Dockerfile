@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y terminator git python3-pip \
     ros-noetic-xacro ros-noetic-compressed-image-transport ros-noetic-rqt* ros-noetic-rviz \
     ros-noetic-gmapping ros-noetic-navigation ros-noetic-interactive-markers black \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
-RUN pip install pyswarm
+RUN pip install pyswarm simple-pid
 
 RUN mkdir -p /root/ros_pid_belbic/src
 
